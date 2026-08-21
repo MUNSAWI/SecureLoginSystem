@@ -1,2 +1,5 @@
-# SecureLoginSystem
-Secure Login System with authentication, authorization, sessions, password hashing, encryption, and admin/user roles.
+# Secure Login System
+
+## Description
+
+A secure web application developed as part of the Application Security and Secure Code course.
