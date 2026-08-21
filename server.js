@@ -11,7 +11,7 @@ require("dotenv").config();
 
 const { JSDOM } = require("jsdom");
 const createDOMPurify = require("dompurify");
-const User = require("./models/User");
+const User = require("./models/user");
 
 const window = new JSDOM("").window;
 const DOMPurify = createDOMPurify(window);
