@@ -86,7 +86,11 @@ CodeQL was then used to verify the security status of the repository.
 ## Installation
 
 1. Clone the repository.
-2. Install the required dependencies:
+   
+git clone https://github.com/MUNSAWI/SecureLoginSystem.git
+cd SecureLoginSystem
+
+3. Install the required dependencies:
 
        npm install
 
@@ -111,6 +115,7 @@ Then open the application in your browser.
 GitHub CodeQL was used to scan the application for security vulnerabilities.
 
 Security findings were reviewed and addressed where applicable.
+
 
 
 
