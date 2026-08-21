@@ -29,6 +29,7 @@
             <tbody id="usersTable">
             </tbody>
         </table>
+
         <button id="logoutBtn">Logout</button>
 
     </div>
@@ -48,49 +49,77 @@
                 document.getElementById("welcome").textContent =
                     "Welcome Admin";
 
-                const table = document.getElementById("usersTable");
+                const table =
+                    document.getElementById("usersTable");
 
-                  users.forEach(user => {
-    const row = document.createElement("tr");
+                users.forEach(user => {
+                    const row = document.createElement("tr");
 
-    const username = document.createElement("td");
-    username.textContent = user.username;
+                    const username = document.createElement("td");
+                    username.textContent = user.username;
 
-    const firstName = document.createElement("td");
-    firstName.textContent = user.firstName;
+                    const firstName = document.createElement("td");
+                    firstName.textContent = user.firstName;
 
-    const lastName = document.createElement("td");
-    lastName.textContent = user.lastName;
+                    const lastName = document.createElement("td");
+                    lastName.textContent = user.lastName;
 
-    const email = document.createElement("td");
-    email.textContent = user.email;
+                    const email = document.createElement("td");
+                    email.textContent = user.email;
 
-    const role = document.createElement("td");
-    role.textContent = user.role;
+                    const role = document.createElement("td");
+                    role.textContent = user.role;
 
-    row.appendChild(username);
-    row.appendChild(firstName);
-    row.appendChild(lastName);
-    row.appendChild(email);
-    row.appendChild(role);
+                    row.appendChild(username);
+                    row.appendChild(firstName);
+                    row.appendChild(lastName);
+                    row.appendChild(email);
+                    row.appendChild(role);
 
-    table.appendChild(row);
-    
-    document.getElementById("logoutBtn").addEventListener("click", async () => {
-    const response = await fetch("/logout", {
-        method: "POST"
-    });
-
-    if (response.ok) {
-        window.location.href = "/login.html";
-    }
-});
-});
+                    table.appendChild(row);
+                });
 
             } catch (error) {
-                console.error("Error loading users:", error);
+                console.error(
+                    "Error loading users:",
+                    error
+                );
             }
         }
+
+
+        document.getElementById("logoutBtn")
+            .addEventListener("click", async () => {
+
+                try {
+                    const csrfResponse =
+                        await fetch("/csrf-token");
+
+                    const csrfData =
+                        await csrfResponse.json();
+
+                    const response =
+                        await fetch("/logout", {
+                            method: "POST",
+                            headers: {
+                                "x-csrf-token":
+                                    csrfData.token
+                            }
+                        });
+
+                    if (response.ok) {
+                        window.location.href =
+                            "/login.html";
+                    }
+
+                } catch (error) {
+                    console.error(
+                        "Logout error:",
+                        error
+                    );
+                }
+            });
+
 
         loadUsers();
     </script>

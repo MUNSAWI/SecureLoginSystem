@@ -10,10 +10,15 @@ loginForm.addEventListener("submit", async (event) => {
     const password = document.getElementById("password").value;
 
     try {
+        // Get CSRF token
+        const csrfResponse = await fetch("/csrf-token");
+        const csrfData = await csrfResponse.json();
+
         const response = await fetch("/login", {
             method: "POST",
             headers: {
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "x-csrf-token": csrfData.token
             },
             body: JSON.stringify({
                 username,
@@ -31,6 +36,7 @@ loginForm.addEventListener("submit", async (event) => {
         message.textContent = result.message;
 
     } catch (error) {
+        console.error(error);
         message.textContent = "Something went wrong. Please try again.";
     }
 });

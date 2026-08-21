@@ -4,6 +4,9 @@ const bcrypt = require("bcrypt");
 const validator = require("validator");
 const session = require("express-session");
 const crypto = require("crypto");
+const rateLimit = require("express-rate-limit");
+const { csrfSync } = require("csrf-sync");
+
 require("dotenv").config();
 
 const { JSDOM } = require("jsdom");
@@ -15,21 +18,22 @@ const DOMPurify = createDOMPurify(window);
 
 const app = express();
 
+const apiLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 100,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    message: { message: "Too many requests, please try again later." }
+});
+
 const PORT = process.env.PORT;
 
-const encryptionKey = Buffer.from(
-    process.env.ENCRYPTION_KEY,
-    "utf8"
-);
+const encryptionKey = Buffer.from(process.env.ENCRYPTION_KEY,"utf8");
 
 function encrypt(text) {
     const iv = crypto.randomBytes(16);
 
-    const cipher = crypto.createCipheriv(
-        "aes-256-cbc",
-        encryptionKey,
-        iv
-    );
+    const cipher = crypto.createCipheriv("aes-256-cbc", encryptionKey, iv );
 
     let encrypted = cipher.update(text, "utf8", "hex");
     encrypted += cipher.final("hex");
@@ -42,22 +46,19 @@ function decrypt(data) {
 
     const iv = Buffer.from(ivHex, "hex");
 
-    const decipher = crypto.createDecipheriv(
-        "aes-256-cbc",
-        encryptionKey,
-        iv
-    );
+    const decipher = crypto.createDecipheriv("aes-256-cbc",encryptionKey,iv );
 
-    let decrypted = decipher.update(
-        encryptedText,
-        "hex",
-        "utf8"
-    );
+    let decrypted = decipher.update(encryptedText,"hex","utf8" );
 
     decrypted += decipher.final("utf8");
 
     return decrypted;
 }
+
+
+
+//    Session Management
+
 
 app.use(
     session({
@@ -65,14 +66,42 @@ app.use(
         resave: false,
         saveUninitialized: false,
         cookie: {
-            httpOnly: true,
-            sameSite: "lax"
-        }
-    })
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax"
+} })
 );
+
+
+
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+
+/* =========================
+   CSRF Protection
+========================= */
+
+const {
+    csrfSynchronisedProtection,
+    generateToken
+} = csrfSync();
+
+app.get("/csrf-token", (req, res) => {
+    const token = generateToken(req);
+
+    res.json({
+        token
+    });
+});
+
+app.use(csrfSynchronisedProtection);
+
+
+
+//    Authentication Middleware
+
 
 function requireLogin(req, res, next) {
     if (!req.session.user) {
@@ -99,49 +128,49 @@ function requireAdmin(req, res, next) {
 
 //    Protected Pages
 
+app.get("/home.html",apiLimiter, requireLogin, (req, res) => {
+        res.sendFile("home.html", {
+            root: "public"
+        });
+    }
+);
 
-app.get("/home.html", requireLogin, (req, res) => {
-    res.sendFile("home.html", { root: "public" });
-});
-
-app.get("/admin.html", requireAdmin, (req, res) => {
-    res.sendFile("admin.html", { root: "public" });
-});
+app.get( "/admin.html", apiLimiter, requireAdmin,(req, res) => {
+        res.sendFile("admin.html", {
+            root: "public"
+        });
+    }
+);
 
 
 //    Admin API
 
+app.get( "/api/admin/users", apiLimiter, requireAdmin, async (req, res) => {
+        try {
+            const users = await User.find({},
+                {
+                    username: 1,
+                    firstName: 1,
+                    lastName: 1,
+                    email: 1,
+                    role: 1
+                }
+            );
 
-app.get("/api/admin/users", requireAdmin, async (req, res) => {
-    try {
-        const users = await User.find(
-            {},
-            {
-                username: 1,
-                firstName: 1,
-                lastName: 1,
-                email: 1,
-                role: 1
-            }
-        );
+            res.json(users);
 
-        res.json(users);
+        } catch (error) {
+            console.error( "Admin users error:", error.message );
 
-    } catch (error) {
-        console.error(
-            "Admin users error:",
-            error.message
-        );
-
-        res.status(500).json({
-            message: "Failed to load users"
-        });
+            res.status(500).json({
+                message: "Failed to load users"
+            });
+        }
     }
-});
+);
 
 
 //    Signup
-
 
 app.post("/signup", async (req, res) => {
     try {
@@ -193,8 +222,7 @@ app.post("/signup", async (req, res) => {
             });
         }
 
-        const usernameRegex =
-            /^[a-zA-Z0-9_]{3,20}$/;
+        const usernameRegex =  /^[a-zA-Z0-9_]{3,20}$/;
 
         if (!usernameRegex.test(cleanUsername)) {
             return res.status(400).json({
@@ -203,8 +231,7 @@ app.post("/signup", async (req, res) => {
             });
         }
 
-        const phoneRegex =
-            /^07[789]\d{7}$/;
+        const phoneRegex = /^07[789]\d{7}$/;
 
         if (!phoneRegex.test(cleanPhone)) {
             return res.status(400).json({
@@ -253,21 +280,12 @@ app.post("/signup", async (req, res) => {
             role: "user"
         });
 
-        res.status(201).json({
-            message:
-                "User registered successfully",
-            userId: user._id
+        res.status(201).json({ message:"User registered successfully", userId: user._id
         });
 
-    } catch (error) {
-        console.error(
-            "Signup error:",
-            error.message
-        );
+    } catch (error) {console.error( "Signup error:", error.message );
 
-        res.status(500).json({
-            message: "Registration failed"
-        });
+        res.status(500).json({ message: "Registration failed" });
     }
 });
 
@@ -276,10 +294,7 @@ app.post("/signup", async (req, res) => {
 
 app.post("/login", async (req, res) => {
     try {
-        const {
-            username,
-            password
-        } = req.body;
+        const {  username,password } = req.body;
 
         if (!username || !password) {
             return res.status(400).json({
@@ -297,22 +312,14 @@ app.post("/login", async (req, res) => {
 
         if (!user) {
             return res.status(401).json({
-                message:
-                    "Invalid username or password"
-            });
+                message: "Invalid username or password" });
         }
 
         const passwordMatch =
-            await bcrypt.compare(
-                password,
-                user.password
-            );
+            await bcrypt.compare( password, user.password );
 
         if (!passwordMatch) {
-            return res.status(401).json({
-                message:
-                    "Invalid username or password"
-            });
+            return res.status(401).json({ message: "Invalid username or password" });
         }
 
         req.session.user = {
@@ -321,8 +328,7 @@ app.post("/login", async (req, res) => {
             role: user.role
         };
 
-        if (user.role === "admin") {
-            return res.redirect("/admin.html");
+        if (user.role === "admin") { return res.redirect("/admin.html");
         }
 
         return res.redirect("/home.html");
@@ -333,9 +339,7 @@ app.post("/login", async (req, res) => {
             error.message
         );
 
-        res.status(500).json({
-            message: "Login failed"
-        });
+        res.status(500).json({ message: "Login failed"});
     }
 });
 
@@ -352,88 +356,68 @@ app.post("/logout", (req, res) => {
 
         res.clearCookie("connect.sid");
 
-        res.json({
-            message:
-                "Logged out successfully"
-        });
+        res.json({message:"Logged out successfully" });
     });
 });
 
 
+
 //    Current User API
 
+app.get("/api/user",requireLogin,async (req, res) => {
+        try {
+            const user = await User.findById(
+                req.session.user.id
+            );
 
-app.get("/api/user", requireLogin, async (req, res) => {
-    try {
-        const user = await User.findById(
-            req.session.user.id
-        );
+            if (!user) {
+                return res.status(404).json({ message: "User not found" });
+            }
 
-        if (!user) {
-            return res.status(404).json({
-                message: "User not found"
+            const decryptedPhone =
+                decrypt(user.phone);
+
+            const decryptedAddress =
+                decrypt(user.address);
+
+            res.json({
+                username: user.username,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                phone: decryptedPhone,
+                address: decryptedAddress
             });
+
+        } catch (error) {
+            console.error("User data error:", error.message   );
+
+            res.status(500).json({  message: "Failed to get user data" });
         }
-
-        const decryptedPhone =
-            decrypt(user.phone);
-
-        const decryptedAddress =
-            decrypt(user.address);
-
-        res.json({
-            username: user.username,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            email: user.email,
-            phone: decryptedPhone,
-            address: decryptedAddress
-        });
-
-    } catch (error) {
-        console.error(
-            "User data error:",
-            error.message
-        );
-
-        res.status(500).json({
-            message:
-                "Failed to get user data"
-        });
     }
-});
+);
+
 
 
 
 app.use(express.static("public"));
 
 
-   
 
 
 app.get("/", (req, res) => {
-    res.send(
-        "Secure Login System is running!"
-    );
+    res.send( "Secure Login System is running!");
 });
 
 
-//    MongoDB 
+//    MongoDB Connection
 
 mongoose
     .connect(process.env.MONGO_URI)
-    .then(() => {
-        console.log("Connected to MongoDB");
+    .then(() => {console.log("Connected to MongoDB" );
 
-        app.listen(PORT, () => {
-            console.log(
-                `Server running on http://localhost:${PORT}`
-            );
+        app.listen(PORT, () => { console.log(`Server running on http://localhost:${PORT}` );
         });
     })
-    .catch((error) => {
-        console.error(
-            "MongoDB connection error:",
-            error.message
-        );
+    .catch((error) => { console.error( "MongoDB connection error:", error.message  );
     });

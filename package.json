@@ -12,9 +12,11 @@
   "type": "commonjs",
   "dependencies": {
     "bcrypt": "^6.0.0",
+    "csrf-sync": "^4.2.1",
     "dompurify": "^3.4.13",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.6.2",
     "express-session": "^1.19.0",
     "he": "^1.2.0",
     "jsdom": "^30.0.1",
