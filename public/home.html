@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container home-container">
+
+        <h1>DASHBOARD</h1>
+
+        <h2 id="welcome"></h2>
+
+        <div class="user-info">
+            <div class="info-row">
+                <span>First Name</span>
+                <strong id="firstName"></strong>
+            </div>
+
+            <div class="info-row">
+                <span>Last Name</span>
+                <strong id="lastName"></strong>
+            </div>
+
+            <div class="info-row">
+                <span>Email</span>
+                <strong id="email"></strong>
+            </div>
+
+            <div class="info-row">
+                <span>Phone</span>
+                <strong id="phone"></strong>
+            </div>
+
+            <div class="info-row">
+                <span>Address</span>
+                <strong id="address"></strong>
+            </div>
+        </div>
+         <button id="logoutBtn">Logout</button>
+    </div>
+
+    <script>
+    async function loadUser() {
+        try {
+            const response = await fetch("/api/user");
+
+            if (!response.ok) {
+                window.location.href = "/login.html";
+                return;
+            }
+
+            const user = await response.json();
+
+            document.getElementById("firstName").textContent =
+            user.firstName;
+
+            document.getElementById("lastName").textContent =
+            user.lastName;
+
+            document.getElementById("email").textContent =
+            user.email;
+
+            document.getElementById("phone").textContent =
+            user.phone;
+
+            document.getElementById("address").textContent =
+            user.address;
+            document.getElementById("logoutBtn").addEventListener("click", async () => {
+           const response = await fetch("/logout", {
+           method: "POST"
+            });
+
+            if (response.ok) {
+             window.location.href = "/login.html";
+               }
+});
+
+        } catch (error) {
+            console.error("Error loading user:", error);
+        }
+    }
+
+    loadUser();
+</script>
+</body>
+</html>

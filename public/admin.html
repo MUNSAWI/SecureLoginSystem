@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div class="container admin-container">
+
+        <h1>ADMIN DASHBOARD</h1>
+        <h2 id="welcome"></h2>
+
+        <h3>Registered Users</h3>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>First Name</th>
+                    <th>Last Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                </tr>
+            </thead>
+
+            <tbody id="usersTable">
+            </tbody>
+        </table>
+        <button id="logoutBtn">Logout</button>
+
+    </div>
+
+    <script>
+        async function loadUsers() {
+            try {
+                const response = await fetch("/api/admin/users");
+
+                if (!response.ok) {
+                    window.location.href = "/login.html";
+                    return;
+                }
+
+                const users = await response.json();
+
+                document.getElementById("welcome").textContent =
+                    "Welcome Admin";
+
+                const table = document.getElementById("usersTable");
+
+                  users.forEach(user => {
+    const row = document.createElement("tr");
+
+    const username = document.createElement("td");
+    username.textContent = user.username;
+
+    const firstName = document.createElement("td");
+    firstName.textContent = user.firstName;
+
+    const lastName = document.createElement("td");
+    lastName.textContent = user.lastName;
+
+    const email = document.createElement("td");
+    email.textContent = user.email;
+
+    const role = document.createElement("td");
+    role.textContent = user.role;
+
+    row.appendChild(username);
+    row.appendChild(firstName);
+    row.appendChild(lastName);
+    row.appendChild(email);
+    row.appendChild(role);
+
+    table.appendChild(row);
+    
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+    const response = await fetch("/logout", {
+        method: "POST"
+    });
+
+    if (response.ok) {
+        window.location.href = "/login.html";
+    }
+});
+});
+
+            } catch (error) {
+                console.error("Error loading users:", error);
+            }
+        }
+
+        loadUsers();
+    </script>
+</body>
+</html>
