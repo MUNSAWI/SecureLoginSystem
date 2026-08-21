@@ -79,9 +79,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 
-/* =========================
-   CSRF Protection
-========================= */
+
+//    CSRF Protection
+
 
 const {
     csrfSynchronisedProtection,
