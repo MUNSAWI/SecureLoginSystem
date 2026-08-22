@@ -26,6 +26,14 @@ const apiLimiter = rateLimit({
     message: { message: "Too many requests, please try again later." }
 });
 
+const authLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    limit: 10,
+    standardHeaders: "draft-8",
+    legacyHeaders: false,
+    message: { message: "Too many authentication attempts. Please try again later." }
+});
+
 const PORT = process.env.PORT;
 
 const encryptionKey = Buffer.from(process.env.ENCRYPTION_KEY,"utf8");
@@ -172,8 +180,8 @@ app.get( "/api/admin/users", apiLimiter, requireAdmin, async (req, res) => {
 
 //    Signup
 
-app.post("/signup", async (req, res) => {
-    try {
+app.post("/signup", authLimiter, async (req, res) => {
+        try {
         const {
             username,
             firstName,
@@ -292,8 +300,8 @@ app.post("/signup", async (req, res) => {
 
 //    Login
 
-app.post("/login", async (req, res) => {
-    try {
+app.post("/login", authLimiter, async (req, res) => {
+        try {
         const {  username,password } = req.body;
 
         if (!username || !password) {
@@ -364,7 +372,7 @@ app.post("/logout", (req, res) => {
 
 //    Current User API
 
-app.get("/api/user",requireLogin,async (req, res) => {
+app.get("/api/user",apiLimiter,requireLogin,async (req, res) => {
         try {
             const user = await User.findById(
                 req.session.user.id
